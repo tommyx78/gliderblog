@@ -17,7 +17,11 @@ Robust Authentication: Session management via HTTPOnly and SameSite cookies to p
 Tech Stack
 ----------------------------
 Backend: Python 3.x, FastAPI, Uvicorn.
+
 Database: MySQL / MariaDB (via MySQL Connector).
+
 Template Engine: Jinja2.
+
 Frontend: Responsive HTML5 & CSS3.
+
 Email: SMTP Protocol (TLS supported).
