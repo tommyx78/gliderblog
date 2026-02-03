@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrazione - Web Portal</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="login-container">
+        <h2>Crea il tuo Account</h2>
+        
+        <p style="text-align: center; color: #666; margin-bottom: 1.5rem; font-size: 0.9rem;">
+            Inserisci i tuoi dati per registrarti al portale.
+        </p>
+
+        {% if error %}
+            <div class="alert alert-error">
+                <strong>Errore:</strong> {{ error }}
+            </div>
+        {% endif %}
+
+        <form action="/register" method="post">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required placeholder="Scegli un nome utente">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required placeholder="la-tua@email.it">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required placeholder="Minimo 8 caratteri">
+            </div>
+            
+            <button type="submit" class="btn-login">Registrati ora</button>
+        </form>
+        
+        <div class="footer-links">
+            <a href="/login">Hai già un account? Accedi</a>
+            <a href="/">Home</a>
+        </div>
+    </div>
+</body>
+</html>

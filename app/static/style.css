@@ -1,0 +1,192 @@
+/* ============================================================
+   RESET & VARIABILI BASE
+   ============================================================ */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+:root {
+    --primary-color: #829c0e;
+    --primary-hover: #6a800b;
+    --bg-gradient: linear-gradient(135deg, #f3e9d2 0%, #829c0e 100%);
+    --error-bg: #fff5f5;
+    --error-color: #c53030;
+    --success-bg: #f0fff4;
+    --success-color: #2f855a;
+    --card-bg: #ffffff;
+    --input-border: #edf2f7;
+    --text-main: #333;
+    --text-muted: #4a5568;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: var(--bg-gradient);
+    color: var(--text-main);
+    padding: 1.5rem;
+}
+
+/* ============================================================
+   CONTAINER E CARDS
+   ============================================================ */
+.container, .login-container {
+    background: var(--card-bg);
+    padding: 2.5rem;
+    border-radius: 20px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+    width: 100%;
+    max-width: 420px;
+    transition: transform 0.3s ease;
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: var(--primary-hover);
+    font-size: 1.8rem;
+    letter-spacing: -0.5px;
+}
+
+/* ============================================================
+   ALERT (ERRORE E SUCCESSO)
+   ============================================================ */
+.alert, .error, .success {
+    padding: 0.8rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.alert-error, .error {
+    background-color: var(--error-bg);
+    color: var(--error-color);
+    border-left: 5px solid var(--error-color);
+}
+
+.alert-success, .success {
+    background-color: var(--success-bg);
+    color: var(--success-color);
+    border-left: 5px solid var(--success-color);
+}
+
+/* ============================================================
+   FORM E INPUT
+   ============================================================ */
+.form-group {
+    margin-bottom: 1.2rem;
+    width: 100%;
+}
+
+form label {
+    display: block;
+    margin-bottom: 0.6rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+form input {
+    width: 100%;
+    padding: 0.9rem;
+    border-radius: 10px;
+    border: 2px solid var(--input-border);
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+form input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(130, 156, 14, 0.15);
+}
+
+/* ============================================================
+   PULSANTI
+   ============================================================ */
+button, .btn-login {
+    width: 100%;
+    padding: 1rem;
+    background-color: var(--primary-color);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 0.5rem;
+    box-shadow: 0 4px 12px rgba(130, 156, 14, 0.3);
+}
+
+button:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(130, 156, 14, 0.4);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+/* ============================================================
+   NAVIGAZIONE E FOOTER LINKS
+   ============================================================ */
+.footer-links {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--input-border);
+    display: flex;
+    justify-content: space-around;
+    gap: 10px;
+}
+
+.footer-links a {
+    color: var(--primary-hover);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    padding: 5px 10px;
+    border-radius: 6px;
+}
+
+.footer-links a:hover {
+    background-color: #f3e9d2;
+    transform: translateY(-1px);
+}
+
+.footer-links a.logout {
+    color: var(--error-color);
+}
+
+.footer-links a.logout:hover {
+    background-color: var(--error-bg);
+}
+
+/* ============================================================
+   RESPONSIVE (MOBILE)
+   ============================================================ */
+@media (max-width: 480px) {
+    body {
+        padding: 1rem;
+    }
+
+    .container, .login-container {
+        padding: 1.5rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    button, .btn-login {
+        font-size: 1rem;
+    }
+}

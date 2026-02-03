@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Web Portal</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="login-container">
+        <h2>Accesso al Portale</h2>
+        
+        {% if error %}
+            <div class="alert alert-error">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        {% if success %}
+            <div class="alert alert-success">
+                {{ success }}
+            </div>
+        {% endif %}
+
+        <form action="/login" method="post">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required placeholder="Inserisci il tuo nome utente">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required placeholder="••••••••">
+            </div>
+            
+            <button type="submit" class="btn-login">Accedi</button>
+        </form>
+        
+        <div class="footer-links">
+            <a href="/">Home</a>
+            <a href="/forgot-password">Password dimenticata?</a>
+            <a href="/register">Registrati</a>
+        </div>
+    </div>
+</body>
+</html>

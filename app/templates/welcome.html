@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benvenuto - Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Benvenuto, {{ username }}!</h2>
+
+        {% if error %}
+            <div class="alert alert-error">{{ error }}</div>
+        {% endif %}
+
+        <p style="text-align: center; color: #666; margin-bottom: 2rem;">
+            Accesso effettuato con successo al portale.
+        </p>
+
+        <div class="footer-links">
+            {% if is_admin %}
+                <a href="/create_user">Gestione Utenti</a>
+            {% endif %}
+            
+            <a href="/">Home</a>
+            <a href="/logout" class="logout">Logout</a>
+        </div>
+    </div>
+</body>
+</html>
