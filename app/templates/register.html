@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registrazione - Web Portal</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* Stile per nascondere il campo honeypot in modo sicuro */
+        .visual-hidden {
+            display: none !important;
+            visibility: hidden !important;
+        }
+    </style>
 </head>
 <body>
     <div class="login-container">
@@ -21,6 +28,13 @@
         {% endif %}
 
         <form action="/register" method="post">
+            <input type="hidden" name="form_load_time" value="{{ form_load_time }}">
+
+            <div class="visual-hidden" aria-hidden="true">
+                <label for="address_field"></label>
+                <input type="text" id="address_field" name="address_field" autocomplete="off" tabindex="-1">
+            </div>
+
             <div class="form-group">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" required placeholder="Scegli un nome utente">

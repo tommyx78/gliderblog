@@ -10,6 +10,7 @@ from datetime import timedelta
 import uvicorn
 import secrets
 import smtplib
+import time # Importato per la gestione del timestamp
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -36,13 +37,10 @@ COOKIE_EXPIRE_MINUTES = 60
 
 def send_verification_email(email: str, username: str, token: str):
     """Sends the activation email using data from config.ini"""
-    
-    # Activation link construction
     host_link = config.email["hostlink"]
     port_link = config.email["portlink"]
     verify_link = f"https://{host_link}:{port_link}/verify/{token}"
     
-    # Message Preparation
     msg = MIMEMultipart()
     msg["From"] = config.smtp["user"]
     msg["To"] = email
@@ -96,11 +94,77 @@ async def redirect_admin_error_handler(request: Request, exc: HTTPException):
 
 @app.get("/register", response_class=HTMLResponse)
 async def register_form(request: Request):
-    """Displays the self-registration form"""
-    return templates.TemplateResponse("register.html", {"request": request, "error": None})
+    """Displays the self-registration form with security timestamp"""
+    return templates.TemplateResponse("register.html", {
+        "request": request, 
+        "error": None,
+        "form_load_time": time.time() # Invia il timestamp attuale al form
+    })
 
+@app.post("/register", response_class=HTMLResponse)
+async def register_submit(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    username: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    address_field: str = Form(""),       # Honeypot field
+    form_load_time: float = Form(...)    # Timestamp field
+):
+    """Handles registration form submission with anti-bot checks"""
+    
+    # 1. Honeypot Check: if filled, it's likely a bot
+    if address_field:
+        return RedirectResponse(url="/", status_code=302)
 
-# --- 1. Password Reset Request Page ---
+    # 2. Time Trap Check: if submitted too fast (under 3 seconds), it's likely a bot
+    if time.time() - form_load_time < 3.0:
+        return templates.TemplateResponse("register.html", {
+            "request": request, 
+            "error": "Submission too fast. Please take your time.",
+            "form_load_time": time.time()
+        })
+
+    token = secrets.token_urlsafe(32)
+    user_type = 1  # Standard registration = non-admin user
+
+    try:
+        conn = db.conn()
+        with conn.cursor() as cursor:
+            # Check if user already exists
+            cursor.execute("SELECT UserId FROM login WHERE username=%s OR email=%s", (username, email))
+            if cursor.fetchone():
+                return templates.TemplateResponse("register.html", {
+                    "request": request, 
+                    "error": "Username or Email already taken",
+                    "form_load_time": time.time()
+                })
+
+            pw_hash = security.hash_password(password)
+            cursor.execute(
+                "INSERT INTO login (username, email, password, type, email_token, is_active) VALUES (%s, %s, %s, %s, %s, 0)",
+                (username, email, pw_hash, user_type, token)
+            )
+            conn.commit()
+            
+            # Send activation email
+            background_tasks.add_task(send_verification_email, email, username, token)
+
+        return templates.TemplateResponse("login.html", {
+            "request": request, 
+            "success": "Registration complete! Please check your email to activate your account."
+        })
+    except Exception as e:
+        return templates.TemplateResponse("register.html", {
+            "request": request, 
+            "error": str(e),
+            "form_load_time": time.time()
+        })
+    finally:
+        if 'conn' in locals(): conn.close()
+
+# --- Password Reset Routes ---
+
 @app.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_form(request: Request):
     return templates.TemplateResponse("forgot_password.html", {"request": request})
@@ -116,17 +180,14 @@ async def forgot_password_submit(request: Request, background_tasks: BackgroundT
             if user:
                 cursor.execute("UPDATE login SET reset_token=%s WHERE email=%s", (token, email))
                 conn.commit()
-                # Asynchronous email sending
                 background_tasks.add_task(send_reset_email, email, user['username'], token)
         
-        # For security reasons, show the same message even if the email does not exist
         return templates.TemplateResponse("forgot_password.html", {
             "request": request, "success": "If the email is in our system, you will receive a reset link shortly."
         })
     finally:
         if 'conn' in locals(): conn.close()
 
-# --- 2. New Password Setup Page ---
 @app.get("/reset-password/{token}", response_class=HTMLResponse)
 async def reset_password_page(request: Request, token: str):
     return templates.TemplateResponse("reset_password_confirm.html", {"request": request, "token": token})
@@ -146,7 +207,6 @@ async def reset_password_submit(request: Request, token: str, new_password: str 
     finally:
         if 'conn' in locals(): conn.close()
 
-# --- Password Recovery Email Function ---
 def send_reset_email(email: str, username: str, token: str):
     host_link, port_link = config.email["hostlink"], config.email["portlink"]
     reset_link = f"https://{host_link}:{port_link}/reset-password/{token}"
@@ -164,46 +224,7 @@ def send_reset_email(email: str, username: str, token: str):
     except Exception as e:
         print(f"Error: {e}")
 
-
-@app.post("/register", response_class=HTMLResponse)
-async def register_submit(
-    request: Request,
-    background_tasks: BackgroundTasks,
-    username: str = Form(...),
-    email: str = Form(...),
-    password: str = Form(...)
-):
-    """Handles registration form submission"""
-    token = secrets.token_urlsafe(32)
-    user_type = 1  # Standard registration = non-admin user
-
-    try:
-        conn = db.conn()
-        with conn.cursor() as cursor:
-            # Check if user already exists
-            cursor.execute("SELECT UserId FROM login WHERE username=%s OR email=%s", (username, email))
-            if cursor.fetchone():
-                return templates.TemplateResponse("register.html", {"request": request, "error": "Username or Email already taken"})
-
-            pw_hash = security.hash_password(password)
-            cursor.execute(
-                "INSERT INTO login (username, email, password, type, email_token, is_active) VALUES (%s, %s, %s, %s, %s, 0)",
-                (username, email, pw_hash, user_type, token)
-            )
-            conn.commit()
-            
-            # Send activation email
-            background_tasks.add_task(send_verification_email, email, username, token)
-
-        return templates.TemplateResponse("login.html", {
-            "request": request, 
-            "success": "Registration complete! Please check your email to activate your account."
-        })
-    except Exception as e:
-        return templates.TemplateResponse("register.html", {"request": request, "error": str(e)})
-    finally:
-        if 'conn' in locals(): conn.close()
-
+# --- Authentication & General Routes ---
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
@@ -214,11 +235,7 @@ async def login_form(request: Request):
     return templates.TemplateResponse("login.html", {"request": request, "error": None})
 
 @app.post("/login")
-async def login_submit(
-    request: Request, 
-    username: str = Form(...), 
-    password: str = Form(...)
-):
+async def login_submit(request: Request, username: str = Form(...), password: str = Form(...)):
     user = None
     try:
         conn = db.conn()
@@ -229,7 +246,6 @@ async def login_submit(
         if 'conn' in locals(): conn.close()
 
     if user and security.verify_password(password, user["password"]):
-        # Check if the user has activated via email
         if user.get("is_active") == 0:
             return templates.TemplateResponse("login.html", {
                 "request": request, 
@@ -238,8 +254,6 @@ async def login_submit(
             
         max_age = int(timedelta(minutes=COOKIE_EXPIRE_MINUTES).total_seconds())
         resp = RedirectResponse(url="/welcome", status_code=302)
-        
-        # Secure cookie parameters
         cookie_params = {"httponly": True, "max_age": max_age, "samesite": "lax"}
         resp.set_cookie(key=COOKIE_NAME, value=user["username"], **cookie_params)
         resp.set_cookie(key=COOKIE_TYPE, value=str(user.get("type", "1")), **cookie_params)
@@ -249,7 +263,6 @@ async def login_submit(
 
 @app.get("/verify/{token}", response_class=HTMLResponse)
 async def verify_account(request: Request, token: str):
-    """Endpoint for account activation via email link."""
     try:
         conn = db.conn()
         with conn.cursor(dictionary=True) as cursor:
@@ -265,68 +278,44 @@ async def verify_account(request: Request, token: str):
     finally:
         if 'conn' in locals(): conn.close()
 
-# --- Protected Routes ---
-
 @app.get("/welcome", response_class=HTMLResponse)
-async def welcome_page(
-    request: Request, 
-    username: str = Depends(get_current_user), 
-    user_type: Optional[str] = Cookie(None)
-):
+async def welcome_page(request: Request, username: str = Depends(get_current_user), user_type: Optional[str] = Cookie(None)):
     return templates.TemplateResponse("welcome.html", {
-        "request": request, 
-        "username": username, 
-        "is_admin": user_type == "0",
+        "request": request, "username": username, "is_admin": user_type == "0",
         "error": request.query_params.get("error")
     })
 
 @app.get("/create_user", response_class=HTMLResponse)
 async def create_user_form(request: Request, username: str = Depends(get_admin_user)):
     return templates.TemplateResponse("create_user.html", {
-        "request": request, 
-        "username": username,
-        "error": None,
-        "success": None
+        "request": request, "username": username, "error": None, "success": None
     })
 
 @app.post("/create_user", response_class=HTMLResponse)
 async def create_user_submit(
-    request: Request,
-    background_tasks: BackgroundTasks,
-    username: str = Form(...),
-    email: str = Form(...),
-    password: str = Form(...),
-    is_admin: Optional[str] = Form(None),
-    admin_name: str = Depends(get_admin_user)
+    request: Request, background_tasks: BackgroundTasks,
+    username: str = Form(...), email: str = Form(...), password: str = Form(...),
+    is_admin: Optional[str] = Form(None), admin_name: str = Depends(get_admin_user)
 ):
     user_type = 0 if is_admin == "on" else 1
     token = secrets.token_urlsafe(32)
-
     try:
         conn = db.conn()
         with conn.cursor() as cursor:
-            # Uniqueness check (Case Insensitivity usually handled by the DB)
             cursor.execute("SELECT UserId FROM login WHERE username=%s OR email=%s", (username, email))
             if cursor.fetchone():
                 return templates.TemplateResponse("create_user.html", {
                     "request": request, "username": admin_name, "error": "Username or Email already present"
                 })
-
             pw_hash = security.hash_password(password)
-            # Insertion with is_active=0 (requires email activation)
             cursor.execute(
                 "INSERT INTO login (username, email, password, type, email_token, is_active) VALUES (%s, %s, %s, %s, %s, 0)",
                 (username, email, pw_hash, user_type, token)
             )
             conn.commit()
-            
-            # Asynchronous email sending (does not block execution)
             background_tasks.add_task(send_verification_email, email, username, token)
-
         return templates.TemplateResponse("create_user.html", {
-            "request": request, 
-            "username": admin_name, 
-            "success": f"User '{username}' created. Activation email sent."
+            "request": request, "username": admin_name, "success": f"User '{username}' created. Activation email sent."
         })
     except Exception as e:
         return templates.TemplateResponse("create_user.html", {
@@ -338,16 +327,8 @@ async def create_user_submit(
 @app.get("/logout")
 async def logout():
     resp = RedirectResponse(url="/login", status_code=302)
-    resp.delete_cookie(COOKIE_NAME)
-    resp.delete_cookie(COOKIE_TYPE)
+    resp.delete_cookie(COOKIE_NAME); resp.delete_cookie(COOKIE_TYPE)
     return resp
 
-# --- Startup ---
-
 if __name__ == "__main__":
-    uvicorn.run(
-        "myweb:app", 
-        host=config.server["host"], 
-        port=config.server["port"], 
-        reload=True
-    )
+    uvicorn.run("myweb:app", host=config.server["host"], port=config.server["port"], reload=True)
