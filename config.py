@@ -11,11 +11,11 @@ class AppConfig:
             "port": int(cfg["server"].get("port", 7979))
         }
         
-        # Manteniamo la compatibilità con le chiamate dirette config.host/port se usate
+        
         self.host = self.server["host"]
         self.port = self.server["port"]
 
-        # Sezione [database]
+
         self.db = {
             "host": cfg["database"]["host"],
             "port": int(cfg["database"]["port"]),
@@ -24,7 +24,7 @@ class AppConfig:
             "database": cfg["database"]["name"],
         }
 
-        # Sezione [smtp] - NUOVA
+
         self.smtp = {
             "server": cfg["smtp"]["server"],
             "port": int(cfg["smtp"]["port"]),
@@ -32,7 +32,7 @@ class AppConfig:
             "password": cfg["smtp"]["password"],
         }
 
-        # Sezione [email] - NUOVA
+ 
         self.email = {
             "hostlink": cfg["email"]["hostlink"],
             "portlink": cfg["email"]["portlink"],

@@ -17,7 +17,7 @@ from database import Database
 from security import DeviceSecurity
 from config import AppConfig
 
-# --- Configurazione Iniziale ---
+# --- Initial Configuration ---
 config = AppConfig("config.ini")
 app = FastAPI(title="Web Login")
 
@@ -27,35 +27,35 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 db = Database(config.db)
 security = DeviceSecurity(db)
 
-# Costanti Sessione
+# Session Constants
 COOKIE_NAME = "user_session"
 COOKIE_TYPE = "user_type"  # "0" = admin, "1" = user
 COOKIE_EXPIRE_MINUTES = 60
 
-# --- Logica Email (SMTP Dinamico) ---
+# --- Email Logic (Dynamic SMTP) ---
 
 def send_verification_email(email: str, username: str, token: str):
-    """Invia l'email di attivazione usando i dati dal config.ini"""
+    """Sends the activation email using data from config.ini"""
     
-    # Costruzione link di attivazione
+    # Activation link construction
     host_link = config.email["hostlink"]
     port_link = config.email["portlink"]
     verify_link = f"https://{host_link}:{port_link}/verify/{token}"
     
-    # Preparazione Messaggio
+    # Message Preparation
     msg = MIMEMultipart()
     msg["From"] = config.smtp["user"]
     msg["To"] = email
-    msg["Subject"] = "Attivazione Account - Portale Glider"
+    msg["Subject"] = "Account Activation - Glider Portal"
     
     body = f"""
-    Ciao {username},
-    Il tuo account è stato creato. Per attivarlo e poter accedere, 
-    clicca sul link seguente:
+    Hello {username},
+    Your account has been created. To activate it and be able to log in, 
+    please click the following link:
     
     {verify_link}
     
-    Se non hai richiesto tu l'attivazione, ignora questa mail.
+    If you did not request this activation, please ignore this email.
     """
     msg.attach(MIMEText(body, "plain"))
     
@@ -65,12 +65,12 @@ def send_verification_email(email: str, username: str, token: str):
             server.login(config.smtp["user"], config.smtp["password"])
             server.send_message(msg)
     except Exception as e:
-        print(f"ERRORE INVIO MAIL: {e}")
+        print(f"EMAIL SEND ERROR: {e}")
 
-# --- Dependency Injection & Protezione Rotte ---
+# --- Dependency Injection & Route Protection ---
 
 async def get_current_user(user_session: Optional[str] = Cookie(None)):
-    """Verifica se l'utente ha una sessione attiva."""
+    """Verifies if the user has an active session."""
     if not user_session:
         raise HTTPException(status_code=307)
     return user_session
@@ -79,7 +79,7 @@ async def get_admin_user(
     user_session: str = Depends(get_current_user), 
     user_type: Optional[str] = Cookie(None)
 ):
-    """Verifica se l'utente loggato è un amministratore."""
+    """Verifies if the logged-in user is an administrator."""
     if user_type != "0":
         raise HTTPException(status_code=403)
     return user_session
@@ -90,17 +90,17 @@ async def redirect_login_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(403)
 async def redirect_admin_error_handler(request: Request, exc: HTTPException):
-    return RedirectResponse(url="/welcome?error=Accesso+negato:+permessi+admin+necessari")
+    return RedirectResponse(url="/welcome?error=Access+denied:+admin+permissions+required")
 
-# --- Rotte Pubbliche ---
+# --- Public Routes ---
 
 @app.get("/register", response_class=HTMLResponse)
 async def register_form(request: Request):
-    """Visualizza il form di auto-registrazione"""
+    """Displays the self-registration form"""
     return templates.TemplateResponse("register.html", {"request": request, "error": None})
 
 
-# --- 1. Pagina Richiesta Reset ---
+# --- 1. Password Reset Request Page ---
 @app.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_form(request: Request):
     return templates.TemplateResponse("forgot_password.html", {"request": request})
@@ -116,17 +116,17 @@ async def forgot_password_submit(request: Request, background_tasks: BackgroundT
             if user:
                 cursor.execute("UPDATE login SET reset_token=%s WHERE email=%s", (token, email))
                 conn.commit()
-                # Invio mail asincrono
+                # Asynchronous email sending
                 background_tasks.add_task(send_reset_email, email, user['username'], token)
         
-        # Per sicurezza, mostriamo lo stesso messaggio anche se l'email non esiste
+        # For security reasons, show the same message even if the email does not exist
         return templates.TemplateResponse("forgot_password.html", {
-            "request": request, "success": "Se l'email è nel sistema, riceverai un link di reset a breve."
+            "request": request, "success": "If the email is in our system, you will receive a reset link shortly."
         })
     finally:
         if 'conn' in locals(): conn.close()
 
-# --- 2. Pagina Impostazione Nuova Password ---
+# --- 2. New Password Setup Page ---
 @app.get("/reset-password/{token}", response_class=HTMLResponse)
 async def reset_password_page(request: Request, token: str):
     return templates.TemplateResponse("reset_password_confirm.html", {"request": request, "token": token})
@@ -141,19 +141,19 @@ async def reset_password_submit(request: Request, token: str, new_password: str 
                 new_hash = security.hash_password(new_password)
                 cursor.execute("UPDATE login SET password=%s, reset_token=NULL WHERE reset_token=%s", (new_hash, token))
                 conn.commit()
-                return templates.TemplateResponse("login.html", {"request": request, "success": "Password aggiornata! Ora puoi accedere."})
-            return templates.TemplateResponse("login.html", {"request": request, "error": "Token non valido o scaduto."})
+                return templates.TemplateResponse("login.html", {"request": request, "success": "Password updated! You can now log in."})
+            return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid or expired token."})
     finally:
         if 'conn' in locals(): conn.close()
 
-# --- Funzione Email Recupero ---
+# --- Password Recovery Email Function ---
 def send_reset_email(email: str, username: str, token: str):
     host_link, port_link = config.email["hostlink"], config.email["portlink"]
     reset_link = f"https://{host_link}:{port_link}/reset-password/{token}"
     
     msg = MIMEMultipart()
-    msg["From"], msg["To"], msg["Subject"] = config.smtp["user"], email, "Recupero Password"
-    body = f"Ciao {username},\n\nClicca qui per reimpostare la tua password: {reset_link}\n\nSe non hai richiesto tu il reset, ignora questa mail."
+    msg["From"], msg["To"], msg["Subject"] = config.smtp["user"], email, "Password Recovery"
+    body = f"Hello {username},\n\nPlease click here to reset your password: {reset_link}\n\nIf you did not request this reset, please ignore this email."
     msg.attach(MIMEText(body, "plain"))
     
     try:
@@ -162,7 +162,7 @@ def send_reset_email(email: str, username: str, token: str):
             server.login(config.smtp["user"], config.smtp["password"])
             server.send_message(msg)
     except Exception as e:
-        print(f"Errore: {e}")
+        print(f"Error: {e}")
 
 
 @app.post("/register", response_class=HTMLResponse)
@@ -173,17 +173,17 @@ async def register_submit(
     email: str = Form(...),
     password: str = Form(...)
 ):
-    """Gestisce l'invio del form di registrazione"""
+    """Handles registration form submission"""
     token = secrets.token_urlsafe(32)
-    user_type = 1  # Registrazione standard = utente non admin
+    user_type = 1  # Standard registration = non-admin user
 
     try:
         conn = db.conn()
         with conn.cursor() as cursor:
-            # Verifica se esiste già
+            # Check if user already exists
             cursor.execute("SELECT UserId FROM login WHERE username=%s OR email=%s", (username, email))
             if cursor.fetchone():
-                return templates.TemplateResponse("register.html", {"request": request, "error": "Username o Email già occupati"})
+                return templates.TemplateResponse("register.html", {"request": request, "error": "Username or Email already taken"})
 
             pw_hash = security.hash_password(password)
             cursor.execute(
@@ -192,12 +192,12 @@ async def register_submit(
             )
             conn.commit()
             
-            # Invio email di attivazione
+            # Send activation email
             background_tasks.add_task(send_verification_email, email, username, token)
 
         return templates.TemplateResponse("login.html", {
             "request": request, 
-            "success": "Registrazione completata! Controlla la mail per attivare l'account."
+            "success": "Registration complete! Please check your email to activate your account."
         })
     except Exception as e:
         return templates.TemplateResponse("register.html", {"request": request, "error": str(e)})
@@ -229,27 +229,27 @@ async def login_submit(
         if 'conn' in locals(): conn.close()
 
     if user and security.verify_password(password, user["password"]):
-        # Controllo se l'utente ha attivato l'email
+        # Check if the user has activated via email
         if user.get("is_active") == 0:
             return templates.TemplateResponse("login.html", {
                 "request": request, 
-                "error": "Account non attivo. Controlla la mail di verifica."
+                "error": "Account not active. Please check your verification email."
             })
             
         max_age = int(timedelta(minutes=COOKIE_EXPIRE_MINUTES).total_seconds())
         resp = RedirectResponse(url="/welcome", status_code=302)
         
-        # Parametri cookie sicuri
+        # Secure cookie parameters
         cookie_params = {"httponly": True, "max_age": max_age, "samesite": "lax"}
         resp.set_cookie(key=COOKIE_NAME, value=user["username"], **cookie_params)
         resp.set_cookie(key=COOKIE_TYPE, value=str(user.get("type", "1")), **cookie_params)
         return resp
     
-    return templates.TemplateResponse("login.html", {"request": request, "error": "Credenziali errate"})
+    return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid credentials"})
 
 @app.get("/verify/{token}", response_class=HTMLResponse)
 async def verify_account(request: Request, token: str):
-    """Endpoint per l'attivazione dell'account tramite link email."""
+    """Endpoint for account activation via email link."""
     try:
         conn = db.conn()
         with conn.cursor(dictionary=True) as cursor:
@@ -259,13 +259,13 @@ async def verify_account(request: Request, token: str):
                 conn.commit()
                 return templates.TemplateResponse("login.html", {
                     "request": request, 
-                    "success": "Account attivato con successo! Ora puoi accedere."
+                    "success": "Account activated successfully! You can now log in."
                 })
-            return templates.TemplateResponse("login.html", {"request": request, "error": "Token non valido o scaduto."})
+            return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid or expired token."})
     finally:
         if 'conn' in locals(): conn.close()
 
-# --- Rotte Protette ---
+# --- Protected Routes ---
 
 @app.get("/welcome", response_class=HTMLResponse)
 async def welcome_page(
@@ -305,32 +305,32 @@ async def create_user_submit(
     try:
         conn = db.conn()
         with conn.cursor() as cursor:
-            # Controllo unicità (Case Insensitive solitamente gestito dal DB)
+            # Uniqueness check (Case Insensitivity usually handled by the DB)
             cursor.execute("SELECT UserId FROM login WHERE username=%s OR email=%s", (username, email))
             if cursor.fetchone():
                 return templates.TemplateResponse("create_user.html", {
-                    "request": request, "username": admin_name, "error": "Username o Email già presenti"
+                    "request": request, "username": admin_name, "error": "Username or Email already present"
                 })
 
             pw_hash = security.hash_password(password)
-            # Inserimento con is_active=0 (necessita attivazione email)
+            # Insertion with is_active=0 (requires email activation)
             cursor.execute(
                 "INSERT INTO login (username, email, password, type, email_token, is_active) VALUES (%s, %s, %s, %s, %s, 0)",
                 (username, email, pw_hash, user_type, token)
             )
             conn.commit()
             
-            # Invio email asincrono (non blocca l'esecuzione)
+            # Asynchronous email sending (does not block execution)
             background_tasks.add_task(send_verification_email, email, username, token)
 
         return templates.TemplateResponse("create_user.html", {
             "request": request, 
             "username": admin_name, 
-            "success": f"Utente '{username}' creato. Mail di attivazione inviata."
+            "success": f"User '{username}' created. Activation email sent."
         })
     except Exception as e:
         return templates.TemplateResponse("create_user.html", {
-            "request": request, "username": admin_name, "error": f"Errore: {e}"
+            "request": request, "username": admin_name, "error": f"Error: {e}"
         })
     finally:
         if 'conn' in locals(): conn.close()
@@ -342,7 +342,7 @@ async def logout():
     resp.delete_cookie(COOKIE_TYPE)
     return resp
 
-# --- Avvio ---
+# --- Startup ---
 
 if __name__ == "__main__":
     uvicorn.run(
