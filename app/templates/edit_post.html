@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Modifica Post - GliderBlog</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container" style="max-width: 600px;">
+        <h1 style="color: var(--primary-hover);">Modifica Post</h1>
+        <form action="/posts/edit/{{ post.PostID }}" method="post" style="margin-top: 2rem;">
+            <div class="form-group">
+                <label>Titolo</label>
+                <input type="text" name="titolo" value="{{ post.titolo }}" required>
+            </div>
+            <div class="form-group">
+                <label>Messaggio</label>
+                <textarea name="testo" style="width:100%; border-radius:10px; border:2px solid var(--input-border); padding:0.9rem; min-height:150px;" required>{{ post.testo }}</textarea>
+            </div>
+            <button type="submit">Salva Modifiche</button>
+        </form>
+        <div class="footer-links">
+            <a href="/feed">Annulla</a>
+        </div>
+    </div>
+</body>
+</html>

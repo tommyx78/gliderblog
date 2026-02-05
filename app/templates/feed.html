@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Feed - GliderBlog</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .feed-container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .post-card {
+            background: var(--card-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+        }
+
+        .post-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .author-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .author-badge {
+            background: var(--primary-color);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .timestamp {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .post-content h3 {
+            color: var(--primary-hover);
+            margin-bottom: 0.5rem;
+        }
+
+        .post-content p {
+            line-height: 1.6;
+            color: var(--text-main);
+            white-space: pre-wrap; /* Mantiene gli a capo nel testo */
+        }
+
+        .post-actions {
+            margin-top: 1.2rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--input-border);
+            display: flex;
+            gap: 15px;
+        }
+
+        .action-link {
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .edit-btn { color: var(--primary-color); }
+        .delete-btn { color: var(--error-color); }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container feed-container">
+        <header style="text-align: center; margin-bottom: 2rem;">
+            <h1 style="color: var(--primary-hover); font-size: 2.2rem;">Global Feed</h1>
+            <p class="subtitle">Scopri cosa succede nella community di <strong>GliderBlog</strong></p>
+        </header>
+
+        <div class="posts-list">
+            {% if posts %}
+                {% for post in posts %}
+                <article class="post-card">
+                    <div class="post-header">
+                        <div class="author-info">
+                            <span class="author-badge">@{{ post.autore }}</span>
+                            {% if post.autore == username %}
+                                <small style="color: var(--success-color); font-weight: bold;">(Tu)</small>
+                            {% endif %}
+                        </div>
+                        <span class="timestamp">{{ post.timestamp.strftime('%d %b %Y • %H:%M') }}</span>
+                    </div>
+
+                    <div class="post-content">
+                        <h3>{{ post.titolo }}</h3>
+                        <p>{{ post.testo }}</p>
+                    </div>
+
+                    {% if post.autore == username %}
+                    <div class="post-actions">
+                        <a href="/posts/edit/{{ post.PostID }}" class="action-link edit-btn">
+                            ✏️ Modifica
+                        </a>
+                        <a href="/posts/delete/{{ post.PostID }}" 
+                           class="action-link delete-btn" 
+                           onclick="return confirm('Sei sicuro di voler eliminare questo post permanentemente?')">
+                            🗑️ Elimina
+                        </a>
+                    </div>
+                    {% endif %}
+                </article>
+                {% endfor %}
+            {% else %}
+                <div class="post-card empty-state">
+                    <p>Nessun post disponibile al momento. Sii il primo a scrivere qualcosa!</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <nav class="footer-links">
+    {% if username %}
+        <a href="/posts">➕ Nuovo Post</a>
+        <a href="/welcome">🏠 Dashboard</a>
+        <a href="/logout" class="logout">🚪 Logout</a>
+    {% else %}
+        <span style="color: var(--text-muted); font-size: 0.85rem;">Loggati per postare —></span>
+        <a href="/login">🔑 Login</a>
+        <a href="/register">📝 Registrati</a>
+    {% endif %}
+</nav>
+    </div>
+</body>
+</html>

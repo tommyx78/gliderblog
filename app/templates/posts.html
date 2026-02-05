@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>GliderBlog - I miei Post</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .posts-wrapper { max-width: 700px; margin: auto; }
+        .new-post-card {
+            background: var(--success-bg);
+            padding: 1.5rem;
+            border-radius: 15px;
+            border: 2px dashed var(--primary-color);
+            margin-bottom: 2.5rem;
+        }
+        .post-card {
+            background: white;
+            border: 1px solid var(--input-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: left;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .post-title { color: var(--primary-hover); margin-bottom: 0.5rem; }
+        .post-date { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem; }
+        textarea {
+            width: 100%; padding: 12px; border-radius: 8px;
+            border: 2px solid var(--input-border); font-size: 1rem;
+            min-height: 100px; margin-bottom: 10px; resize: vertical;
+        }
+    </style>
+</head>
+<body>
+    <div class="container posts-wrapper">
+        <h1 style="color: var(--primary-hover);">I miei Post</h1>
+        <p style="margin-bottom: 1.5rem;">Ciao <strong>{{ username }}</strong>, cosa vuoi condividere oggi?</p>
+
+        <div class="new-post-card">
+            <h3 style="margin-bottom: 1rem;">Nuovo Pensiero</h3>
+            <form action="/posts/add" method="post">
+                <input type="text" name="titolo" placeholder="Titolo del post" required style="margin-bottom: 10px;">
+                <textarea name="testo" placeholder="Scrivi qui il tuo messaggio..." required></textarea>
+                <button type="submit">Pubblica Post</button>
+            </form>
+        </div>
+
+        <h2 style="text-align: left; margin-bottom: 1rem; border-bottom: 2px solid var(--primary-color); display: inline-block;">La tua bacheca</h2>
+
+        <div class="posts-list">
+            {% if posts %}
+                {% for post in posts %}
+                <div class="post-card">
+                    <h3 class="post-title">{{ post.titolo }}</h3>
+                    <div class="post-date">Pubblicato il: {{ post.timestamp.strftime('%d/%m/%Y %H:%M') }}</div>
+                    <p style="line-height: 1.5; color: var(--text-main);">{{ post.testo }}</p>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="text-align: center; color: var(--text-muted); margin-top: 2rem;">Non hai ancora scritto nulla. Il tuo blog è vuoto!</p>
+            {% endif %}
+        </div>
+
+        <div class="footer-links">
+            <a href="/feed" style="background-color: var(--primary-color); color: white; padding: 5px 15px;">Vai alla Bacheca Pubblica 🌍</a>
+            <a href="/welcome">Torna alla Dashboard</a>
+            <a href="/logout" class="logout">Logout</a>
+        </div>
+    </div>
+</body>
+</html>
